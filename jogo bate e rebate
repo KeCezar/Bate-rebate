@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bate e Rebate</title>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js"></script>
+    <style>canvas { border: 1px solid black; }</style>
+</head>
+<body>
+    <h1>Bate e Rebate</h1>
+    <div id="output"></div>
+    <script>
+        async function main() {
+            let pyodide = await loadPyodide();
+            await pyodide.loadPackage("pygame");
+            await pyodide.runPython(`
+                import pygame
+import sys
+import math
+import time
+
+pygame.init()
+
+width, height = 800, 600
+screen = pygame.display.set_mode((width, height))
+pygame.display.set_caption("Bate e rebate...")
+
+
+white = (255, 255, 255)
+red = (255, 0, 0)
+black = (0, 0, 0)
+
+ball_radius = 20
+ball_x, ball_y = 100, 300
+ball_speed = 0.0000000001
+ball_angle = math.pi / 4
+
+paddle_width = 300
+paddle_height = 20
+paddle_x = (width - paddle_width) // 2
+paddle_y = height - 50
+paddle_speed = 1.9
+
+numColisoes = 0
+running = True
+start_time = time.time()
+speed_increment_factor = 0.000005
+
+font = pygame.font.Font(None, 36)
+
+while running:
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+    keys = pygame.key.get_pressed()
+
+    if keys[pygame.K_LEFT] and paddle_x > 0:
+        paddle_x -= paddle_speed
+    if keys[pygame.K_RIGHT] and paddle_x + paddle_width < width:
+        paddle_x += paddle_speed
+
+    ball_x += ball_speed * math.cos(ball_angle)
+    ball_y -= ball_speed * math.sin(ball_angle)
+
+    screen.fill(black)
+
+    pygame.draw.rect(screen, white, (paddle_x, paddle_y, paddle_width, paddle_height))
+    pygame.draw.circle(screen, white, (int(ball_x), int(ball_y)), ball_radius)
+
+    if (ball_x + ball_radius >= paddle_x) and (ball_x - ball_radius <= paddle_x + paddle_width) and (
+            ball_y + ball_radius >= paddle_y):
+        ball_angle = -ball_angle
+        numColisoes += 1
+
+    if (ball_x + ball_radius >= width) or (ball_x - ball_radius <= 0):
+        ball_angle = math.pi - ball_angle
+    if ball_y - ball_radius <= 0:
+        ball_angle = -ball_angle
+    if ball_y + ball_radius >= height:
+        print("Fim de jogo")
+        running = False
+
+    current_time = time.time() - start_time
+    ball_speed += speed_increment_factor * current_time
+
+
+    # Exibindo a pontuação na tela
+    score_text = font.render(f"Pontuação: {numColisoes}", True, white)
+    screen.blit(score_text, (20, 20))
+
+    pygame.display.flip()
+
+pygame.quit()
+print(f"Pontuação: {numColisoes}")
+sys.exit()
+            `);
+        }
+        main();
+    </script>
+</body>
+</html>
