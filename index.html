@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Bate e Rebate Turbo</title>
+    <title>Bate e Rebate TURBO</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
@@ -10,23 +10,30 @@
         #score {
             position: fixed; top: 10px; left: 10px;
             color: white; font-family: Arial; font-size: 24px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
         #restart {
             position: fixed; bottom: 20px; left: 50%;
             transform: translateX(-50%); padding: 12px 24px;
-            background: #4CAF50; color: white; border: none;
+            background: #FF5722; color: white; border: none;
             border-radius: 25px; font-size: 18px; display: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
         }
     </style>
 </head>
 <body>
     <div id="score">Pontuação: 0</div>
-    <button id="restart">Jogar Novamente</button>
+    <button id="restart">JOGAR NOVAMENTE</button>
 
     <script>
-        let ballX, ballY, ballSpeedX, ballSpeedY;
-        let paddleX, paddleY, paddleWidth, paddleHeight;
-        let ballRadius, score, gameOver;
+        let ballX, ballY;
+        let ballSpeedX = 0, ballSpeedY = 0;
+        let paddleX, paddleY;
+        let paddleWidth, paddleHeight;
+        let ballRadius;
+        let score;
+        let gameOver;
+        let speedMultiplier = 1.0;
 
         function setup() {
             createCanvas(windowWidth, windowHeight);
@@ -34,20 +41,23 @@
         }
 
         function initGame() {
-            ballRadius = min(width, height) * 0.03;
+            ballRadius = min(width, height) * 0.02;
             paddleWidth = width * 0.25;
             paddleHeight = height * 0.02;
             
             ballX = width / 2;
-            ballY = height / 4;
-            ballSpeedX = width * 2; // Velocidade aumentada
-            ballSpeedY = height * 2;
+            ballY = height / 3;
+            
+            // VELOCIDADE INICIAL MUITO MAIS RÁPIDA (3x mais que antes)
+            ballSpeedX = width * 0.02 * (random() > 0.5 ? 1 : -1);
+            ballSpeedY = height * 0.02;
             
             paddleX = (width - paddleWidth) / 2;
             paddleY = height - paddleHeight * 4;
             
             score = 0;
             gameOver = false;
+            speedMultiplier = 1.0;
             
             document.getElementById('score').textContent = `Pontuação: ${score}`;
             document.getElementById('restart').style.display = 'none';
@@ -58,25 +68,33 @@
             background(0);
             
             if (!gameOver) {
-                // Movimento da bola (mais rápido)
-                ballX += ballSpeedX;
-                ballY += ballSpeedY;
+                // MOVIMENTO DA BOLA (COM ACELERAÇÃO PROGRESSIVA)
+                ballX += ballSpeedX * speedMultiplier;
+                ballY += ballSpeedY * speedMultiplier;
 
-                // Colisões com paredes
-                if (ballX < ballRadius || ballX > width - ballRadius) ballSpeedX *= -1;
-                if (ballY < ballRadius) ballSpeedY *= -1;
+                // Colisão com as paredes
+                if (ballX < ballRadius || ballX > width - ballRadius) {
+                    ballSpeedX *= -1;
+                }
+                if (ballY < ballRadius) {
+                    ballSpeedY *= -1;
+                }
 
-                // Colisão com raquete (rebate angular)
-                if (ballY + ballRadius > paddleY && ballY < paddleY + paddleHeight &&
-                    ballX > paddleX && ballX < paddleX + paddleWidth) {
+                // Colisão com a raquete (REBATE DINÂMICO)
+                if (ballY + ballRadius > paddleY && 
+                    ballY - ballRadius < paddleY + paddleHeight &&
+                    ballX > paddleX && 
+                    ballX < paddleX + paddleWidth) {
                     
+                    // Ângulo de rebate mais extremo
                     let hitPosition = (ballX - paddleX) / paddleWidth;
-                    let angle = map(hitPosition, 0, 1, -PI/4, PI/4);
+                    let angle = map(hitPosition, 0, 1, -PI/3, PI/3);
                     
-                    ballSpeedX = width * 0.01 * sin(angle);
-                    ballSpeedY = -abs(height * 0.01 * cos(angle));
+                    ballSpeedX = width * 0.025 * sin(angle);
+                    ballSpeedY = -abs(height * 0.025 * cos(angle));
                     
                     score++;
+                    speedMultiplier += 0.02; // Aumenta a velocidade a cada rebate
                     document.getElementById('score').textContent = `Pontuação: ${score}`;
                 }
 
@@ -87,24 +105,31 @@
                 }
             }
 
-            // Desenha elementos
+            // DESENHA ELEMENTOS
             fill(255);
             noStroke();
-            ellipse(ballX, ballY, ballRadius * 2);
-            rect(paddleX, paddleY, paddleWidth, paddleHeight);
+            ellipse(ballX, ballY, ballRadius * 2); // Bola
+            
+            // Raquete com gradiente
+            let gradient = drawingContext.createLinearGradient(paddleX, paddleY, paddleX + paddleWidth, paddleY);
+            gradient.addColorStop(0, '#FF5722');
+            gradient.addColorStop(1, '#FFC107');
+            drawingContext.fillStyle = gradient;
+            rect(paddleX, paddleY, paddleWidth, paddleHeight, 10);
 
-            // Tela de Game Over
+            // Game Over Screen
             if (gameOver) {
                 fill(255);
-                textSize(width * 0.08);
+                textSize(width * 0.1);
                 textAlign(CENTER, CENTER);
-                text("Fim de Jogo", width/2, height/2 - 50);
-                text(`Pontuação: ${score}`, width/2, height/2 + 20);
+                text("GAME OVER", width/2, height/2 - 50);
+                textSize(width * 0.06);
+                text(`Pontuação: ${score}`, width/2, height/2 + 30);
                 document.getElementById('restart').style.display = 'block';
             }
         }
 
-        // Controle por toque/clique (preciso)
+        // CONTROLE ULTRA-RESPONSIVO (TOQUE/CLIQUE)
         function touchMoved(e) {
             let touchPos = e.touches ? e.touches[0].clientX : mouseX;
             paddleX = constrain(touchPos - paddleWidth/2, 0, width - paddleWidth);
@@ -118,9 +143,12 @@
             }
         }
 
-        // Reinício
+        // REINÍCIO RÁPIDO
         document.getElementById('restart').addEventListener('click', initGame);
-        window.addEventListener('resize', () => resizeCanvas(windowWidth, windowHeight));
+        window.addEventListener('resize', () => {
+            resizeCanvas(windowWidth, windowHeight);
+            if (gameOver) initGame();
+        });
     </script>
 </body>
 </html>
