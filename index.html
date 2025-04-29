@@ -1,46 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Bate e Rebate Mobile</title>
+    <title>Bate e Rebate Turbo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            touch-action: none;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            user-select: none;
-            background-color: #000;
-        }
-        canvas {
-            display: block;
-            touch-action: none;
-        }
+        body { margin: 0; overflow: hidden; touch-action: none; }
+        canvas { display: block; }
         #score {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            color: white;
-            font-family: Arial;
-            font-size: 24px;
-            z-index: 100;
+            position: fixed; top: 10px; left: 10px;
+            color: white; font-family: Arial; font-size: 24px;
         }
         #restart {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 12px 24px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 25px;
-            font-size: 18px;
-            display: none;
-            z-index: 100;
+            position: fixed; bottom: 20px; left: 50%;
+            transform: translateX(-50%); padding: 12px 24px;
+            background: #4CAF50; color: white; border: none;
+            border-radius: 25px; font-size: 18px; display: none;
         }
     </style>
 </head>
@@ -49,25 +24,12 @@
     <button id="restart">Jogar Novamente</button>
 
     <script>
-        let ballX, ballY;
-        let ballSpeedX, ballSpeedY;
-        let paddleX, paddleY;
-        let paddleWidth, paddleHeight;
-        let ballRadius;
-        let score;
-        let gameOver;
-        let isMobile;
-        let touchX = 0;
-        let lastTouchX = 0;
+        let ballX, ballY, ballSpeedX, ballSpeedY;
+        let paddleX, paddleY, paddleWidth, paddleHeight;
+        let ballRadius, score, gameOver;
 
         function setup() {
-            isMobile = /Mobi|Android/i.test(navigator.userAgent);
-            
-            let canvas = createCanvas(windowWidth, windowHeight);
-            canvas.touchStarted(touchStart);
-            canvas.touchMoved(touchMove);
-            canvas.touchEnded(touchEnd);
-            
+            createCanvas(windowWidth, windowHeight);
             initGame();
         }
 
@@ -78,8 +40,8 @@
             
             ballX = width / 2;
             ballY = height / 4;
-            ballSpeedX = width * 0.006;
-            ballSpeedY = height * 0.006;
+            ballSpeedX = width * 0.01; // Velocidade aumentada
+            ballSpeedY = height * 0.01;
             
             paddleX = (width - paddleWidth) / 2;
             paddleY = height - paddleHeight * 4;
@@ -96,30 +58,23 @@
             background(0);
             
             if (!gameOver) {
-                // Movimento da bola
+                // Movimento da bola (mais rápido)
                 ballX += ballSpeedX;
                 ballY += ballSpeedY;
 
-                // Colisão com as paredes
-                if (ballX < ballRadius || ballX > width - ballRadius) {
-                    ballSpeedX *= -1;
-                }
-                if (ballY < ballRadius) {
-                    ballSpeedY *= -1;
-                }
+                // Colisões com paredes
+                if (ballX < ballRadius || ballX > width - ballRadius) ballSpeedX *= -1;
+                if (ballY < ballRadius) ballSpeedY *= -1;
 
-                // Colisão com a raquete
-                if (ballY + ballRadius > paddleY && 
-                    ballY - ballRadius < paddleY + paddleHeight &&
-                    ballX > paddleX && 
-                    ballX < paddleX + paddleWidth) {
+                // Colisão com raquete (rebate angular)
+                if (ballY + ballRadius > paddleY && ballY < paddleY + paddleHeight &&
+                    ballX > paddleX && ballX < paddleX + paddleWidth) {
                     
-                    // Calcula o ângulo de rebate baseado onde a bola acertou a raquete
                     let hitPosition = (ballX - paddleX) / paddleWidth;
                     let angle = map(hitPosition, 0, 1, -PI/4, PI/4);
                     
-                    ballSpeedX = width * 0.006 * sin(angle);
-                    ballSpeedY = -abs(height * 0.006 * cos(angle));
+                    ballSpeedX = width * 0.01 * sin(angle);
+                    ballSpeedY = -abs(height * 0.01 * cos(angle));
                     
                     score++;
                     document.getElementById('score').textContent = `Pontuação: ${score}`;
@@ -127,31 +82,16 @@
 
                 // Game Over
                 if (ballY > height + ballRadius) {
-                    endGame();
+                    gameOver = true;
+                    noLoop();
                 }
-
-                // Movimento suave da raquete em dispositivos móveis
-                if (isMobile) {
-                    let targetX = touchX - paddleWidth/2;
-                    paddleX = lerp(paddleX, targetX, 0.2);
-                } else {
-                    // Controles de teclado para desktop
-                    if (keyIsDown(LEFT_ARROW)) {
-                        paddleX -= width * 0.02;
-                    }
-                    if (keyIsDown(RIGHT_ARROW)) {
-                        paddleX += width * 0.02;
-                    }
-                }
-                
-                paddleX = constrain(paddleX, 0, width - paddleWidth);
             }
 
-            // Desenha os elementos
+            // Desenha elementos
             fill(255);
             noStroke();
-            ellipse(ballX, ballY, ballRadius * 2); // Bola
-            rect(paddleX, paddleY, paddleWidth, paddleHeight); // Raquete
+            ellipse(ballX, ballY, ballRadius * 2);
+            rect(paddleX, paddleY, paddleWidth, paddleHeight);
 
             // Tela de Game Over
             if (gameOver) {
@@ -159,47 +99,28 @@
                 textSize(width * 0.08);
                 textAlign(CENTER, CENTER);
                 text("Fim de Jogo", width/2, height/2 - 50);
-                textSize(width * 0.05);
                 text(`Pontuação: ${score}`, width/2, height/2 + 20);
                 document.getElementById('restart').style.display = 'block';
             }
         }
 
-        function touchStart() {
-            touchX = touchX || mouseX;
-            lastTouchX = touchX;
-            return false; // Previne scrolling
-        }
-
-        function touchMove(e) {
-            // Captura a posição do toque
-            touchX = e.touches ? e.touches[0].clientX : mouseX;
-            
-            // Movimento mais preciso
-            let diff = touchX - lastTouchX;
-            paddleX = constrain(paddleX + diff, 0, width - paddleWidth);
-            lastTouchX = touchX;
-            
-            e.preventDefault(); // Bloqueia o scroll
+        // Controle por toque/clique (preciso)
+        function touchMoved(e) {
+            let touchPos = e.touches ? e.touches[0].clientX : mouseX;
+            paddleX = constrain(touchPos - paddleWidth/2, 0, width - paddleWidth);
+            e.preventDefault();
             return false;
         }
 
-        function touchEnd() {
-            touchX = null;
+        function mousePressed() {
+            if (!gameOver) {
+                paddleX = constrain(mouseX - paddleWidth/2, 0, width - paddleWidth);
+            }
         }
 
-        function endGame() {
-            gameOver = true;
-            noLoop();
-        }
-
-        function windowResized() {
-            resizeCanvas(windowWidth, windowHeight);
-        }
-
-        // Botão de reinício
+        // Reinício
         document.getElementById('restart').addEventListener('click', initGame);
-        document.getElementById('restart').addEventListener('touchend', initGame);
+        window.addEventListener('resize', () => resizeCanvas(windowWidth, windowHeight));
     </script>
 </body>
 </html>
