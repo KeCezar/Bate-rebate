@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Bate e Rebate</title>
+    <title>Bate e Rebate Mobile</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
     <style>
@@ -9,42 +9,45 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
-            touch-action: manipulation;
-            font-family: Arial, sans-serif;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
             background-color: #000;
-            color: white;
         }
         canvas {
             display: block;
-            margin: 0 auto;
             touch-action: none;
         }
         #score {
-            position: absolute;
+            position: fixed;
             top: 10px;
             left: 10px;
+            color: white;
+            font-family: Arial;
             font-size: 24px;
+            z-index: 100;
         }
         #restart {
-            position: absolute;
+            position: fixed;
             bottom: 20px;
             left: 50%;
             transform: translateX(-50%);
-            padding: 10px 20px;
-            font-size: 18px;
-            display: none;
-            background-color: #4CAF50;
+            padding: 12px 24px;
+            background: #4CAF50;
             color: white;
             border: none;
-            border-radius: 5px;
-            cursor: pointer;
+            border-radius: 25px;
+            font-size: 18px;
+            display: none;
+            z-index: 100;
         }
     </style>
 </head>
 <body>
     <div id="score">Pontuação: 0</div>
     <button id="restart">Jogar Novamente</button>
-    
+
     <script>
         let ballX, ballY;
         let ballSpeedX, ballSpeedY;
@@ -54,31 +57,32 @@
         let score;
         let gameOver;
         let isMobile;
+        let touchX = 0;
+        let lastTouchX = 0;
 
         function setup() {
             isMobile = /Mobi|Android/i.test(navigator.userAgent);
             
             let canvas = createCanvas(windowWidth, windowHeight);
-            canvas.mouseMoved(movePaddleWithMouse);
-            if (isMobile) {
-                canvas.touchMoved(movePaddleWithTouch);
-            }
-
+            canvas.touchStarted(touchStart);
+            canvas.touchMoved(touchMove);
+            canvas.touchEnded(touchEnd);
+            
             initGame();
         }
 
         function initGame() {
-            ballRadius = min(width, height) * 0.02;
-            paddleWidth = width * 0.2;
+            ballRadius = min(width, height) * 0.03;
+            paddleWidth = width * 0.25;
             paddleHeight = height * 0.02;
             
             ballX = width / 2;
-            ballY = height / 3;
-            ballSpeedX = width * 0.005;
-            ballSpeedY = height * 0.005;
+            ballY = height / 4;
+            ballSpeedX = width * 0.006;
+            ballSpeedY = height * 0.006;
             
             paddleX = (width - paddleWidth) / 2;
-            paddleY = height - paddleHeight * 3;
+            paddleY = height - paddleHeight * 4;
             
             score = 0;
             gameOver = false;
@@ -105,23 +109,33 @@
                 }
 
                 // Colisão com a raquete
-                if (
-                    ballY + ballRadius > paddleY &&
-                    ballX > paddleX &&
-                    ballX < paddleX + paddleWidth
-                ) {
-                    ballSpeedY *= -1;
+                if (ballY + ballRadius > paddleY && 
+                    ballY - ballRadius < paddleY + paddleHeight &&
+                    ballX > paddleX && 
+                    ballX < paddleX + paddleWidth) {
+                    
+                    // Calcula o ângulo de rebate baseado onde a bola acertou a raquete
+                    let hitPosition = (ballX - paddleX) / paddleWidth;
+                    let angle = map(hitPosition, 0, 1, -PI/4, PI/4);
+                    
+                    ballSpeedX = width * 0.006 * sin(angle);
+                    ballSpeedY = -abs(height * 0.006 * cos(angle));
+                    
                     score++;
                     document.getElementById('score').textContent = `Pontuação: ${score}`;
                 }
 
-                // Game Over se a bola cair
+                // Game Over
                 if (ballY > height + ballRadius) {
                     endGame();
                 }
 
-                // Movimento da raquete (teclado para desktop)
-                if (!isMobile) {
+                // Movimento suave da raquete em dispositivos móveis
+                if (isMobile) {
+                    let targetX = touchX - paddleWidth/2;
+                    paddleX = lerp(paddleX, targetX, 0.2);
+                } else {
+                    // Controles de teclado para desktop
                     if (keyIsDown(LEFT_ARROW)) {
                         paddleX -= width * 0.02;
                     }
@@ -129,39 +143,49 @@
                         paddleX += width * 0.02;
                     }
                 }
+                
                 paddleX = constrain(paddleX, 0, width - paddleWidth);
             }
 
-            // Desenha a bola e a raquete
+            // Desenha os elementos
             fill(255);
             noStroke();
-            ellipse(ballX, ballY, ballRadius * 2);
-            rect(paddleX, paddleY, paddleWidth, paddleHeight);
+            ellipse(ballX, ballY, ballRadius * 2); // Bola
+            rect(paddleX, paddleY, paddleWidth, paddleHeight); // Raquete
 
-            // Mostra "Game Over" se necessário
+            // Tela de Game Over
             if (gameOver) {
                 fill(255);
-                textSize(width * 0.06);
-                textAlign(CENTER);
-                text("Fim de Jogo!", width / 2, height / 2);
-                textSize(width * 0.04);
-                text(`Pontuação: ${score}`, width / 2, height / 2 + height * 0.08);
+                textSize(width * 0.08);
+                textAlign(CENTER, CENTER);
+                text("Fim de Jogo", width/2, height/2 - 50);
+                textSize(width * 0.05);
+                text(`Pontuação: ${score}`, width/2, height/2 + 20);
                 document.getElementById('restart').style.display = 'block';
             }
         }
 
-        function movePaddleWithMouse() {
-            if (!isMobile) {
-                paddleX = mouseX - paddleWidth / 2;
-                paddleX = constrain(paddleX, 0, width - paddleWidth);
-            }
+        function touchStart() {
+            touchX = touchX || mouseX;
+            lastTouchX = touchX;
+            return false; // Previne scrolling
         }
 
-        function movePaddleWithTouch() {
-            if (isMobile) {
-                paddleX = touchX - paddleWidth / 2;
-                paddleX = constrain(paddleX, 0, width - paddleWidth);
-            }
+        function touchMove(e) {
+            // Captura a posição do toque
+            touchX = e.touches ? e.touches[0].clientX : mouseX;
+            
+            // Movimento mais preciso
+            let diff = touchX - lastTouchX;
+            paddleX = constrain(paddleX + diff, 0, width - paddleWidth);
+            lastTouchX = touchX;
+            
+            e.preventDefault(); // Bloqueia o scroll
+            return false;
+        }
+
+        function touchEnd() {
+            touchX = null;
         }
 
         function endGame() {
@@ -171,13 +195,11 @@
 
         function windowResized() {
             resizeCanvas(windowWidth, windowHeight);
-            if (gameOver) {
-                initGame();
-            }
         }
 
         // Botão de reinício
         document.getElementById('restart').addEventListener('click', initGame);
+        document.getElementById('restart').addEventListener('touchend', initGame);
     </script>
 </body>
 </html>
